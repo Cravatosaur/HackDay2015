@@ -27,19 +27,7 @@ func main() {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Root")
-    //http.Redirect(w, r, "/404.html", http.StatusFound)
-}
-
-func jsHandler(w http.ResponseWriter, r *http.Request) {
-    title := r.URL.Path[len("/view/"):]
-    p, _ := loadPage( title )
-    fmt.Fprintf(w, "<h1>%s</h1><div>%s</div>", p.Title, p.Body)
-}
-
-func htmlHandler(w http.ResponseWriter, r *http.Request) {
-    title := r.URL.Path[len("/view/"):]
-    p, err := loadHtmlPage( "view/" + title )
+    p, err := loadPage( "view/index.html" )
     if err != nil {
         fmt.Println("---")
         fmt.Println(err)
@@ -50,27 +38,36 @@ func htmlHandler(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func viewHandler(w http.ResponseWriter, r *http.Request) {
+func htmlHandler(w http.ResponseWriter, r *http.Request) {
     title := r.URL.Path[len("/view/"):]
-    p, _ := loadPage( title )
-    fmt.Fprintf(w, "<h1>%s</h1><div>%s</div>", p.Title, p.Body)
-}
-
-func loadHtmlPage(title string) (*Page, error) {
-    filename := title
-    body, err := ioutil.ReadFile(filename)
+    fmt.Println("Render HTML " + title )
+    p, err := loadPage( "view/" + title )
     if err != nil {
         fmt.Println("---")
         fmt.Println(err)
         fmt.Println("---")
-        return nil, err
+        http.Redirect(w, r, "/view/404.html", http.StatusFound)
+    } else {
+      fmt.Fprintf(w, "%s",  p.Body)
     }
-    return &Page{Title: title, Body: body}, nil
 }
 
+func jsHandler(w http.ResponseWriter, r *http.Request) {
+    title := r.URL.Path[len("/js/"):]
+    fmt.Println("Render JS " + title )
+    p, err := loadPage( "js/" + title )
+    if err != nil {
+        fmt.Println("---")
+        fmt.Println(err)
+        fmt.Println("---")
+        http.Redirect(w, r, "/view/404.html", http.StatusFound)
+    } else {
+      fmt.Fprintf(w, "%s",  p.Body)
+    }
+}
 
 func loadPage(title string) (*Page, error) {
-    filename := title + ".html"
+    filename := title
     body, err := ioutil.ReadFile(filename)
     if err != nil {
         fmt.Println("---")
