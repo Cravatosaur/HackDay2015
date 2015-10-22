@@ -6,6 +6,7 @@ import (
     "io/ioutil"
     "strings"
     "aws"
+    "encoding/json"
 )
 
 type Page struct {
@@ -40,13 +41,36 @@ func cloudwatchHandler(w http.ResponseWriter, r *http.Request) {
 
   if ( len(splitPath) <= 2 || splitPath[2] == ""  ) {
     resp, _ := cw.ListMetrics()
-    fmt.Fprintf(w, "%s",  resp)
+    nameSpaces := make(map[string]int)
+    for _,element := range resp.Metrics {
+      nameSpaces[*element.Namespace] = nameSpaces[*element.Namespace] + 1
+    }
+    jsonResp, _ := json.Marshal(nameSpaces)
+    fmt.Fprintf(w, "%s",  jsonResp)
   } else if ( len(splitPath) <= 3 || splitPath[3] == "" ){
     cw.NameSpace = "AWS/" + splitPath[2]
     resp, _ := cw.ListMetrics()
-    fmt.Fprintf(w, "%s",  resp)
+
+    dimensionNames := make(map[string][]string)
+    for _,element := range resp.Metrics {
+      for _,dimension := range element.Dimensions {
+        if ( dimensionNames[*dimension.Name] == nil ) {
+          dimensionNames[*dimension.Name] = []string{*dimension.Value}
+        } else {
+          dimensionNames[*dimension.Name] = append(dimensionNames[*dimension.Name], *dimension.Value)
+        }
+        fmt.Println(dimensionNames[*dimension.Name])
+      }
+    }
+    jsonResp, _ := json.Marshal(dimensionNames)
+    fmt.Fprintf(w, "%s",  jsonResp)
   } else {
-    fmt.Fprintf(w, "Too long")
+    cw.NameSpace = "AWS/RDS"
+    //cw.DimensionName = "DBInstanceIdentifier"
+    //cw.DimensionValue = "giftbit-testing"
+    cw.MetricName = "CPUUtilization"
+    resp, _ := cw.FetchMetric()
+    fmt.Fprintf(w, "%s",  resp)
   }
 }
 
