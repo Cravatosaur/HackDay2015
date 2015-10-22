@@ -24,50 +24,46 @@ func getCloudWatchWithCredentials() *cloudwatch.CloudWatch {
   return client
 }
 
-func (cw *CloudWatcher) FetchMetric() (out string, err error) {
+func (cw *CloudWatcher) FetchMetric() (out *cloudwatch.GetMetricStatisticsOutput, err error) {
   client := getCloudWatchWithCredentials()
   now := time.Now()
+  later := now.AddDate(0, 0, -1)
 
   params := &cloudwatch.GetMetricStatisticsInput{
-    EndTime:    aws.Time(now),     // Required
-  	Period:     aws.Int64(60),             // Required
-  	StartTime:  aws.Time(now.Add(-120 * time.Minute)),     // Required
+    //Dimensions : []*cloudwatch.Dimension{
+    //  { // Required
+    //    Name:  aws.String(cw.DimensionName), // Required
+    //    Value: aws.String(cw.DimensionValue),
+    //  },
+    //},
+
+    EndTime:   &now,     // Required
+  	Period:     aws.Int64(120),             // Required
+  	StartTime:  &later,     // Required
   	Statistics: []*string{ // Required
-  		aws.String("Average"), // Required
+  		aws.String("Sum"), // Required
+      aws.String("SampleCount"), // Required
   		// More values...
   	},
-  	Unit: aws.String("Count"),
+    MetricName: aws.String(cw.MetricName),
+    Namespace: aws.String(cw.NameSpace),
+  	//Unit: aws.String("Count"),
   }
 
-  if (len(cw.DimensionName) > 0 && len(cw.DimensionName) > 0) {
-    params.Dimensions = []*cloudwatch.Dimension{
-  		{ // Required
-  			Name:  aws.String(cw.DimensionName), // Required
-  			Value: aws.String(cw.DimensionValue),
-  		},
-    }
-  }
-  if (len(cw.MetricName) > 0 ) {
-    params.MetricName = aws.String(cw.MetricName)
-  }
-  if (len(cw.NameSpace) > 0 ) {
-    params.Namespace = aws.String(cw.NameSpace)
-  }
+  req, resp := client.GetMetricStatisticsRequest(params)
+  fmt.Println(req)
 
-
-  resp, err := client.GetMetricStatistics(params)
-
+  err = req.Send()
   if err != nil {
   	// Print the error, cast err to awserr.Error to get the Code and
   	// Message from an error.
   	fmt.Println(err.Error())
-  	return "", err
+  	return nil, err
   }
-
-  // Pretty-print the response data.
+  fmt.Println("---")
   fmt.Println(resp)
 
-  return resp.String(), nil
+  return resp, nil
 }
 
 
@@ -89,6 +85,7 @@ func (cw *CloudWatcher) ListMetrics() (*cloudwatch.ListMetricsOutput, error) {
   if (len(cw.NameSpace) > 0 ) {
     params.Namespace = aws.String(cw.NameSpace)
   }
+  fmt.Println(params)
   return cw.fetchFromParams(params)
 }
 

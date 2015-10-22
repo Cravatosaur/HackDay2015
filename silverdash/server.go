@@ -45,32 +45,66 @@ func cloudwatchHandler(w http.ResponseWriter, r *http.Request) {
     for _,element := range resp.Metrics {
       nameSpaces[*element.Namespace] = nameSpaces[*element.Namespace] + 1
     }
+    fmt.Println(resp)
     jsonResp, _ := json.Marshal(nameSpaces)
     fmt.Fprintf(w, "%s",  jsonResp)
   } else if ( len(splitPath) <= 3 || splitPath[3] == "" ){
-    cw.NameSpace = "AWS/" + splitPath[2]
+    cw.MetricName = splitPath[2]
     resp, _ := cw.ListMetrics()
+    fmt.Println(resp)
 
-    dimensionNames := make(map[string][]string)
+    dimensionNames := make(map[string]map[string]int)
     for _,element := range resp.Metrics {
       for _,dimension := range element.Dimensions {
         if ( dimensionNames[*dimension.Name] == nil ) {
-          dimensionNames[*dimension.Name] = []string{*dimension.Value}
-        } else {
-          dimensionNames[*dimension.Name] = append(dimensionNames[*dimension.Name], *dimension.Value)
+          dimensionNames[*dimension.Name] = make(map[string]int)
         }
-        fmt.Println(dimensionNames[*dimension.Name])
+        dimensionNames[*dimension.Name][*dimension.Value] = dimensionNames[*dimension.Name][*dimension.Value] + 1
       }
     }
     jsonResp, _ := json.Marshal(dimensionNames)
     fmt.Fprintf(w, "%s",  jsonResp)
+
+
+    // cw.NameSpace = "AWS/" + splitPath[2]
+    // resp, _ := cw.ListMetrics()
+    // fmt.Println(resp)
+    //
+    // dimensionNames := make(map[string]map[string]int)
+    // for _,element := range resp.Metrics {
+    //   for _,dimension := range element.Dimensions {
+    //     if ( dimensionNames[*dimension.Name] == nil ) {
+    //       dimensionNames[*dimension.Name] = make(map[string]int)
+    //     }
+    //     dimensionNames[*dimension.Name][*dimension.Value] = dimensionNames[*dimension.Name][*dimension.Value] + 1
+    //   }
+    // }
+    // jsonResp, _ := json.Marshal(dimensionNames)
+    // fmt.Fprintf(w, "%s",  jsonResp)
+  } else if ( len(splitPath) <= 5 || splitPath[5] == "" ) {
+    cw.NameSpace = "AWS/" + splitPath[2]
+    cw.DimensionName = splitPath[3]
+    cw.DimensionValue = splitPath[4]
+    resp, _ := cw.ListMetrics()
+    metrics := make(map[string]int)
+    for _,element := range resp.Metrics {
+      metrics[*element.MetricName] = metrics[*element.MetricName] + 1
+    }
+    jsonResp, _ := json.Marshal(metrics)
+    fmt.Fprintf(w, "%s",  jsonResp)
+
   } else {
-    cw.NameSpace = "AWS/RDS"
-    //cw.DimensionName = "DBInstanceIdentifier"
-    //cw.DimensionValue = "giftbit-testing"
-    cw.MetricName = "CPUUtilization"
+    cw.NameSpace = "AWS/" + splitPath[2]
+    cw.DimensionName = "instanceid"//splitPath[3]
+    cw.DimensionValue = "i-27747be1"//splitPath[4]
+    cw.MetricName = splitPath[5]
     resp, _ := cw.FetchMetric()
-    fmt.Fprintf(w, "%s",  resp)
+    fmt.Println(resp.String())
+    for _,element := range resp.Datapoints {
+        fmt.Println(*element)
+    }
+    jsonResp, _ := json.Marshal(resp)
+    fmt.Fprintf(w, "%s",  jsonResp)
   }
 }
 
