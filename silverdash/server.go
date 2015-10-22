@@ -4,6 +4,8 @@ import (
     "fmt"
     "net/http"
     "io/ioutil"
+    "strings"
+    "aws"
 )
 
 type Page struct {
@@ -17,13 +19,35 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-
 func main() {
 
   http.HandleFunc("/", rootHandler)
 	http.HandleFunc("/view/", htmlHandler)
   http.HandleFunc("/js/", jsHandler)
+  http.HandleFunc("/watch/",cloudwatchHandler)
 	http.ListenAndServe(":8080", nil)
+}
+
+func cloudwatchHandler(w http.ResponseWriter, r *http.Request) {
+
+  cw := new(aws.CloudWatcher)
+  splitPath := strings.Split(r.URL.Path, "/")
+  fmt.Println(splitPath)
+  fmt.Println(len(splitPath))
+  for i := 0 ; i < len(splitPath) ; i++ {
+    fmt.Println(splitPath[i])
+  }
+
+  if ( len(splitPath) <= 2 || splitPath[2] == ""  ) {
+    resp, _ := cw.ListMetrics()
+    fmt.Fprintf(w, "%s",  resp)
+  } else if ( len(splitPath) <= 3 || splitPath[3] == "" ){
+    cw.NameSpace = "AWS/" + splitPath[2]
+    resp, _ := cw.ListMetrics()
+    fmt.Fprintf(w, "%s",  resp)
+  } else {
+    fmt.Fprintf(w, "Too long")
+  }
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
